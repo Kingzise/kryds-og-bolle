@@ -8,13 +8,18 @@ Single-file Danish Tic-Tac-Toe game (`kryds-og-bolle.html`). No build step, no d
 
 ## Git workflow
 
-Commit and push to GitHub after every meaningful change:
+**After every meaningful change, commit and push immediately.** Never leave work uncommitted. This ensures we always have a saved state on GitHub and can roll back at any point.
 
 ```
 git add kryds-og-bolle.html
 git commit -m "descriptive message"
 git push
 ```
+
+Commit message rules:
+- First line: short imperative summary of what changed and why (e.g. `Fix AI not blocking diagonal wins`)
+- No vague messages like "update" or "fix stuff"
+- One commit per logical change — don't batch unrelated edits
 
 Remote: `https://github.com/Kingzise/kryds-og-bolle` (branch: `master`)
 
