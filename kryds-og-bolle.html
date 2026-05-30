@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kryds og Bolle</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 24px;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      letter-spacing: 2px;
+      color: #e94560;
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    button {
+      padding: 10px 22px;
+      border: 2px solid #e94560;
+      background: transparent;
+      color: #eee;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    button:hover, button.active {
+      background: #e94560;
+      color: #fff;
+    }
+
+    .status {
+      font-size: 1.2rem;
+      min-height: 1.6em;
+      text-align: center;
+      color: #a8dadc;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 110px);
+      grid-template-rows: repeat(3, 110px);
+      gap: 10px;
+    }
+
+    .cell {
+      background: #16213e;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #0f3460;
+      transform: scale(1.04);
+    }
+
+    .cell.taken { cursor: default; }
+    .cell.x { color: #e94560; }
+    .cell.o { color: #a8dadc; }
+    .cell.win { background: #0f3460; box-shadow: 0 0 16px rgba(233,69,96,0.6); }
+
+    .scores {
+      display: flex;
+      gap: 40px;
+      font-size: 1rem;
+    }
+
+    .score-box {
+      text-align: center;
+    }
+
+    .score-box span {
+      display: block;
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .score-box.active-player {
+      color: #e94560;
+    }
+
+    #reset-btn {
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Kryds og Bolle</h1>
+
+  <div class="mode-buttons">
+    <button id="btn-2p" class="active" onclick="setMode('2p')">To spillere</button>
+    <button id="btn-ai" onclick="setMode('ai')">Mod computer</button>
+  </div>
+
+  <div class="scores">
+    <div class="score-box" id="score-x">
+      X (Spiller 1)<span id="score-x-val">0</span>
+    </div>
+    <div class="score-box" id="score-o">
+      O (<span id="o-label">Spiller 2</span>)<span id="score-o-val">0</span>
+    </div>
+  </div>
+
+  <div class="status" id="status">Spiller X starter</div>
+
+  <div class="board" id="board">
+    <div class="cell" onclick="click_cell(0)"></div>
+    <div class="cell" onclick="click_cell(1)"></div>
+    <div class="cell" onclick="click_cell(2)"></div>
+    <div class="cell" onclick="click_cell(3)"></div>
+    <div class="cell" onclick="click_cell(4)"></div>
+    <div class="cell" onclick="click_cell(5)"></div>
+    <div class="cell" onclick="click_cell(6)"></div>
+    <div class="cell" onclick="click_cell(7)"></div>
+    <div class="cell" onclick="click_cell(8)"></div>
+  </div>
+
+  <button id="reset-btn" onclick="reset_game()">Ny runde</button>
+
+  <script>
+    const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+    let board = Array(9).fill(null);
+    let current = 'X';
+    let gameOver = false;
+    let mode = '2p';
+    let scores = { X: 0, O: 0 };
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btn-2p').classList.toggle('active', m === '2p');
+      document.getElementById('btn-ai').classList.toggle('active', m === 'ai');
+      document.getElementById('o-label').textContent = m === 'ai' ? 'Computer' : 'Spiller 2';
+      reset_game();
+    }
+
+    function click_cell(i) {
+      if (gameOver || board[i]) return;
+      if (mode === 'ai' && current === 'O') return;
+      play(i);
+      if (mode === 'ai' && !gameOver && current === 'O') {
+        setTimeout(ai_move, 350);
+      }
+    }
+
+    function play(i) {
+      board[i] = current;
+      render();
+      const win = check_win();
+      if (win) {
+        mark_win(win);
+        scores[current]++;
+        update_scores();
+        setStatus(current === 'X' ? '🎉 Spiller X vinder!' : (mode === 'ai' ? '🤖 Computeren vinder!' : '🎉 Spiller O vinder!'));
+        gameOver = true;
+      } else if (board.every(Boolean)) {
+        setStatus("Uafgjort! 🤝");
+        gameOver = true;
+      } else {
+        current = current === 'X' ? 'O' : 'X';
+        if (mode === 'ai') {
+          setStatus(current === 'X' ? 'Din tur (X)' : 'Computeren tænker...');
+        } else {
+          setStatus(`Spiller ${current}s tur`);
+        }
+        update_active_player();
+      }
+    }
+
+    function ai_move() {
+      if (gameOver) return;
+      const move = best_move();
+      play(move);
+    }
+
+    function best_move() {
+      // Try to win
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'O';
+          if (check_win()) { board[i] = null; return i; }
+          board[i] = null;
+        }
+      }
+      // Block player
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'X';
+          if (check_win()) { board[i] = null; return i; }
+          board[i] = null;
+        }
+      }
+      // Take center
+      if (!board[4]) return 4;
+      // Take corner
+      for (const c of [0,2,6,8]) if (!board[c]) return c;
+      // Take any
+      return board.findIndex(v => !v);
+    }
+
+    function check_win() {
+      for (const [a,b,c] of WINS) {
+        if (board[a] && board[a] === board[b] && board[b] === board[c]) return [a,b,c];
+      }
+      return null;
+    }
+
+    function mark_win(cells) {
+      const divs = document.querySelectorAll('.cell');
+      cells.forEach(i => divs[i].classList.add('win'));
+    }
+
+    function render() {
+      const divs = document.querySelectorAll('.cell');
+      board.forEach((val, i) => {
+        divs[i].textContent = val === 'X' ? '✕' : val === 'O' ? '◯' : '';
+        divs[i].className = 'cell' + (val ? ` taken ${val.toLowerCase()}` : '');
+      });
+    }
+
+    function update_scores() {
+      document.getElementById('score-x-val').textContent = scores.X;
+      document.getElementById('score-o-val').textContent = scores.O;
+    }
+
+    function update_active_player() {
+      document.getElementById('score-x').classList.toggle('active-player', current === 'X');
+      document.getElementById('score-o').classList.toggle('active-player', current === 'O');
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    function reset_game() {
+      board = Array(9).fill(null);
+      current = 'X';
+      gameOver = false;
+      render();
+      setStatus(mode === 'ai' ? 'Din tur (X)' : 'Spiller X starter');
+      update_active_player();
+    }
+
+    update_active_player();
+  </script>
+</body>
+</html>
